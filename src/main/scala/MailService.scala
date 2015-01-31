@@ -49,6 +49,8 @@ package object MailService {
 
         message.setContent(multipart)
         Transport.send(message)
+        println(s"Sending message with following config: \n\n${Config.toString}\n")
+        println("Message(s) succsessfully sent!")
       } catch {
         case ex: MessagingException => println(ex.getLocalizedMessage)
         case _: NullPointerException => println("Error: probably malformed config")
