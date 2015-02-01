@@ -6,12 +6,11 @@ import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMult
 /**
 * Created by alexander on 26.12.14.
 */
-package object MailService {
+  object MailService {
 
-  object sender {
+    def send(configPath: String) {
 
-    def send() {
-
+      Config(configPath)
       val properties = new Properties()
       for((property, value) <- Config.get.properties){
         properties.put(property, value)
@@ -24,7 +23,6 @@ package object MailService {
 
       try {
         val message: Message = new MimeMessage(session)
-        message.setFrom(new InternetAddress("olex3000sp@gmail.com"))
 
         for(recipient <- Config.get.recipients) {
           message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient))
@@ -48,13 +46,11 @@ package object MailService {
         }
 
         message.setContent(multipart)
-        Transport.send(message)
+      //  Transport.send(message)
         println(s"Sending message with following config: \n\n${Config.toString}\n")
-        println("Message(s) succsessfully sent!")
+        println("Message(s) successfully sent!")
       } catch {
         case ex: MessagingException => println(ex.getLocalizedMessage)
-        case _: NullPointerException => println("Error: probably malformed config")
       }
     }
   }
-}

@@ -1,3 +1,5 @@
+import java.nio.file.FileSystemNotFoundException
+
 import spray.json._
 
 import scala.io.Source
@@ -6,7 +8,7 @@ import scala.io.Source
  * Created by alexander on 16.01.15.
  */
 
-case class Config(
+case class ConfigContent(
                  username: String,
                  password: String,
                  subject: String,
@@ -16,18 +18,25 @@ case class Config(
                  attachments: Seq[String])
 
 object ConfigJSONParsingProtocol extends DefaultJsonProtocol {
-  implicit val configFormat = jsonFormat7(Config.apply)
+  implicit val configFormat = jsonFormat7(ConfigContent)
 }
 
 object Config {
 
   import ConfigJSONParsingProtocol._
 
-  def source: String = Source.fromFile("/home/alexander/Projects/DMS/out/artifacts/dms_jar/config.json").mkString
+  private var source: String = null
+  
+  def get = JsonParser(source).convertTo[ConfigContent]
 
-  val jsonAST = JsonParser(source)
-
-  val get = jsonAST.convertTo[Config]
+  def apply(path: String) = {
+    try {
+      println(s"reading config form: $path")
+      source = Source.fromFile(path).mkString
+    } catch {
+      case ex: FileSystemNotFoundException => println(ex.getLocalizedMessage)
+    }
+  }
 
   override def toString: String = {
       s"From: ${get.username}\n" +
