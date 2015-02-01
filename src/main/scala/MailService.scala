@@ -30,7 +30,7 @@ import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMult
 
         message.setSubject(Config.get.subject)
         var bodyPart: BodyPart = new MimeBodyPart
-        bodyPart.setText("this is a message body part")
+        bodyPart.setText(Config.get.text)
 
         val multipart: Multipart = new MimeMultipart
 
