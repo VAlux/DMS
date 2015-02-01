@@ -46,8 +46,8 @@ import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMult
         }
 
         message.setContent(multipart)
-        Transport.send(message)
         println(s"Sending message with following config: \n\n${Config.toString}\n")
+        Transport.send(message)
         println("Message(s) successfully sent!")
       } catch {
         case ex: MessagingException => println(ex.getLocalizedMessage)
