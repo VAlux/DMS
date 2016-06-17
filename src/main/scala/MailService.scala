@@ -3,54 +3,63 @@ import javax.activation.{DataHandler, DataSource, FileDataSource}
 import javax.mail._
 import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
 
-/**
-* Created by alexander on 26.12.14.
-*/
-  object MailService {
+import scala.util.{Failure, Success, Try}
 
-    def send(configPath: String) {
+class MailService(private[this] val configPath: String) {
 
-      Config(configPath)
-      val properties = new Properties()
-      for((property, value) <- Config.get.properties){
-        properties.put(property, value)
-      }
+  private lazy val parsedConfig = Config.parseConfig(configPath)
 
-      val session = Session.getInstance(properties, new Authenticator {
-        override def getPasswordAuthentication: PasswordAuthentication =
-          new PasswordAuthentication(Config.get.username, Config.get.password)
-      })
+  private def initSession: Session = {
 
-      try {
-        val message: Message = new MimeMessage(session)
+    val properties = new Properties()
 
-        for(recipient <- Config.get.recipients) {
-          message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient))
-        }
+    parsedConfig.properties foreach { case(property, value) =>
+      properties.put(property, value)
+    }
 
-        message.setSubject(Config.get.subject)
-        var bodyPart: BodyPart = new MimeBodyPart
-        bodyPart.setText(Config.get.text)
+    Session.getInstance(properties, new Authenticator {
+      override def getPasswordAuthentication: PasswordAuthentication =
+        new PasswordAuthentication(parsedConfig.username, parsedConfig.password)
+    })
+  }
 
-        val multipart: Multipart = new MimeMultipart
+  private def createMessage: Message = {
+    val session = initSession
+    val message: Message = new MimeMessage(session)
+    var bodyPart: BodyPart = new MimeBodyPart
+    val multipart: Multipart = new MimeMultipart
 
-        multipart.addBodyPart(bodyPart)
+    for(recipient <- parsedConfig.recipients) {
+      message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient))
+    }
 
-        for(attachment <- Config.get.attachments) {
-          bodyPart = new MimeBodyPart
-          val filename: String = attachment
-          val source: DataSource = new FileDataSource(filename)
-          bodyPart.setDataHandler(new DataHandler(source))
-          bodyPart.setFileName(filename)
-          multipart.addBodyPart(bodyPart)
-        }
+    parsedConfig.recipients foreach { recipient =>
+      message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient))
+    }
 
-        message.setContent(multipart)
-        println(s"Sending message with following config: \n\n${Config.toString}\n")
-        Transport.send(message)
-        println("Message(s) successfully sent!")
-      } catch {
-        case ex: MessagingException => println(ex.getLocalizedMessage)
-      }
+    message.setSubject(parsedConfig.subject)
+    bodyPart.setText(parsedConfig.text)
+    multipart.addBodyPart(bodyPart)
+
+    parsedConfig.attachments foreach { attachment =>
+      bodyPart = new MimeBodyPart
+      val filename: String = attachment
+      val source: DataSource = new FileDataSource(filename)
+      bodyPart.setDataHandler(new DataHandler(source))
+      bodyPart.setFileName(filename)
+      multipart.addBodyPart(bodyPart)
+    }
+
+    message.setContent(multipart)
+
+    message
+  }
+
+  def send(): Unit = {
+    println(s"Sending message with following config: \n\n${Config.toString}\n")
+    Try(Transport.send(createMessage)) match {
+      case _: Success => println("Message successfully sent!")
+      case Failure(ex) => println(ex.getMessage)
     }
   }
+}

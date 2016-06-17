@@ -1,12 +1,6 @@
-import java.nio.file.FileSystemNotFoundException
-
 import spray.json._
 
 import scala.io.Source
-
-/**
- * Created by alexander on 16.01.15.
- */
 
 case class ConfigContent(
                  username: String,
@@ -25,24 +19,23 @@ object Config {
 
   import ConfigJSONParsingProtocol._
 
-  private var source: String = null
-  
-  def get = JsonParser(source).convertTo[ConfigContent]
-
-  def apply(path: String) = {
-    try {
-      println(s"reading config form: $path")
-      source = Source.fromFile(path).mkString
-    } catch {
-      case ex: FileSystemNotFoundException => println(ex.getLocalizedMessage)
-    }
+  private def loadParserInput(path: String): ParserInput = {
+    println(s"reading config form: $path")
+    ParserInput(Source.fromFile(path).mkString)
   }
 
+  def parseConfig(path: String): ConfigContent = {
+    parsed = JsonParser(loadParserInput(path)).convertTo[ConfigContent]
+    parsed
+  }
+  
+  private var parsed: ConfigContent = _
+
   override def toString: String = {
-      s"From: ${get.username}\n" +
-      s"Recipients: ${get.recipients}\n" +
-      s"Subject: ${get.subject}\n" +
-      s"Text: ${get.text}\n" +
-      s"Attachments: ${get.attachments}"
+      s"From: ${parsed.username}\n" +
+      s"Recipients: ${parsed.recipients}\n" +
+      s"Subject: ${parsed.subject}\n" +
+      s"Text: ${parsed.text}\n" +
+      s"Attachments: ${parsed.attachments}"
   }
 }
