@@ -1,7 +1,7 @@
 # DMS
-####E-Mailing Service in scala.
+#### E-Mailing Service in scala.
 
-=============
+----
 Typical json config example(gmail):
 ```
  {
