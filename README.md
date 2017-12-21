@@ -3,7 +3,7 @@
 
 ----
 Typical json config example(gmail):
-```
+``` json
  {
    "username": "user@name.com",
    "password": "password",
