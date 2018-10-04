@@ -1,8 +1,7 @@
 # DMS
 #### E-Mailing Service in scala.
 
-----
-Typical json config example(gmail):
+Typical json config example (gmail):
 ``` json
  {
    "username": "user@name.com",

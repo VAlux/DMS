@@ -1,4 +1,5 @@
 import java.util.Properties
+
 import javax.activation.{DataHandler, DataSource, FileDataSource}
 import javax.mail._
 import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
@@ -7,13 +8,12 @@ import scala.util.{Failure, Success, Try}
 
 class MailService(private[this] val configPath: String) {
 
-  private lazy val parsedConfig = Config.parseConfig(configPath)
+  private lazy val parsedConfig: ConfigContent = Config.parseConfig(configPath)
 
   private def initSession: Session = {
-
     val properties = new Properties()
 
-    parsedConfig.properties foreach { case(property, value) =>
+    parsedConfig.properties foreach { case (property, value) =>
       properties.put(property, value)
     }
 
@@ -26,40 +26,47 @@ class MailService(private[this] val configPath: String) {
   private def createMessage: Message = {
     val session = initSession
     val message: Message = new MimeMessage(session)
-    var bodyPart: BodyPart = new MimeBodyPart
     val multipart: Multipart = new MimeMultipart
-
-    for(recipient <- parsedConfig.recipients) {
-      message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient))
-    }
 
     parsedConfig.recipients foreach { recipient =>
       message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient))
     }
 
-    message.setSubject(parsedConfig.subject)
-    bodyPart.setText(parsedConfig.text)
-    multipart.addBodyPart(bodyPart)
+    parsedConfig.attachments
+      .map(createBodyPart)
+      .foreach(multipart.addBodyPart)
 
-    parsedConfig.attachments foreach { attachment =>
-      bodyPart = new MimeBodyPart
-      val filename: String = attachment
-      val source: DataSource = new FileDataSource(filename)
-      bodyPart.setDataHandler(new DataHandler(source))
-      bodyPart.setFileName(filename)
-      multipart.addBodyPart(bodyPart)
-    }
+    val textPart = new MimeBodyPart()
+    textPart.setText(parsedConfig.text)
+    multipart.addBodyPart(textPart)
 
     message.setContent(multipart)
+    message.setSubject(parsedConfig.subject)
 
     message
   }
 
+  def createBodyPart(attachment: String): BodyPart = {
+    val bodyPart = new MimeBodyPart
+    val source: DataSource = new FileDataSource(attachment)
+    bodyPart.setDataHandler(new DataHandler(source))
+    bodyPart.setFileName(attachment)
+    bodyPart
+  }
+
   def send(): Unit = {
-    println(s"Sending message with following config: \n\n${Config.toString}\n")
+    println(s"Sending message with following config: \n\n${showConfig(parsedConfig)}\n")
     Try(Transport.send(createMessage)) match {
-      case _: Success => println("Message successfully sent!")
+      case _: Success[_] => println("Message successfully sent!")
       case Failure(ex) => println(ex.getMessage)
     }
+  }
+
+  def showConfig(parsed: ConfigContent): String = {
+    s"From: ${parsed.username}\n" +
+      s"Recipients: ${parsed.recipients}\n" +
+      s"Subject: ${parsed.subject}\n" +
+      s"Text: ${parsed.text}\n" +
+      s"Attachments: ${parsed.attachments}"
   }
 }
